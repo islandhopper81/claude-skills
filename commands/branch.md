@@ -22,21 +22,33 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
    - Otherwise, derive it from the ticket summary (max 4–5 words, lowercase, hyphens).
    - Example: "Add ingredient substitution suggestions" → `ingredient-substitution-suggestions`
 
-4. **Check out the branch** from the current default branch (`main` or `master`):
+4. **Create the branch and worktree** together from the default branch:
    ```
-   git checkout main && git pull origin main
-   git checkout -b {branch-name}
+   git fetch origin
+   git worktree add -b {branch-name} ../{repo-name}-{TICKET-ID} origin/{default-branch}
+   ```
+   Where `{repo-name}` is the current directory name (e.g. `FeedTheFamily`).
+   This creates the branch and a linked working directory simultaneously —
+   the current checkout is not disturbed.
+
+5. **Install dependencies** in the new worktree. Check which subdirectories exist
+   and run `npm install` in each:
+   ```
+   cd ../{repo-name}-{TICKET-ID}/backend && npm install
+   cd ../{repo-name}-{TICKET-ID}/frontend && npm install
+   ```
+   Skip any subdirectory that does not exist.
+
+6. **Push the branch** to the remote to establish tracking:
+   ```
+   cd ../{repo-name}-{TICKET-ID} && git push -u origin {branch-name}
    ```
 
-5. **Push the branch** to the remote to establish tracking:
-   ```
-   git push -u origin {branch-name}
-   ```
-
-6. **Report back** with:
+7. **Report back** with:
    - The full branch name created
+   - The worktree path (e.g. `../FeedTheFamily-FF-42`)
    - Confirmation the branch is pushed and tracking
-   - Prompt: "Branch is ready. Begin implementation, then run `/test` when ready to validate."
+   - Prompt: "Branch and worktree are ready at `../{repo-name}-{TICKET-ID}`. Open that directory to begin implementation, then run `/test` when ready to validate."
 
-Do not create the branch if there are uncommitted changes on the current branch —
-warn the user and ask how to proceed.
+Do not create the worktree if a worktree for that branch already exists —
+check with `git worktree list` first and warn the user if so.
