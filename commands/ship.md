@@ -32,6 +32,7 @@ Invoke the `implement-ticket` skill with the provided ticket ID.
 - Explore the codebase, read all relevant files
 - Implement the changes exactly as specified in the ticket's implementation plan
 - Write or update tests as required by the ticket
+- **Skip the Phase 5 Handoff** — do not prompt the user at the end of `implement-ticket`; return control here and continue to Step 3.
 
 ---
 
