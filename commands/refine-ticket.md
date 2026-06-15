@@ -66,6 +66,10 @@ Analyze the ticket from each of the following perspectives. For each expert, ide
 - Are edge cases, error states, and failure modes covered?
 - Are there technical prerequisites (migrations, env vars, config) that must happen first?
 - Would an AI agent be able to write code directly from this ticket without asking a follow-up question?
+- **Complexity & size estimate:** Based on the implementation plan and codebase context, list the specific files expected to change and estimate lines of code (new + modified). Then assign a complexity category:
+  - **Low** — 1–3 files, <100 LOC, single layer (e.g. UI-only or API-only), no schema changes, no new dependencies
+  - **Medium** — 4–8 files, 100–300 LOC, spans 2 layers (e.g. API + DB or frontend + backend), may include a migration or new env var
+  - **High** — 9+ files, 300+ LOC, cross-cutting concerns (auth, schema + migration, new service/dependency, multiple layers)
 
 #### Testing Engineer
 - Are acceptance criteria testable via automated tests?
@@ -140,6 +144,16 @@ If none: "No API or data contract changes."]
 
 ## Dependencies & Prerequisites
 [Other tickets that must merge first, env vars that must exist, services that must be running.]
+
+## Complexity & Cost Estimate
+- **Complexity**: Low / Medium / High
+- **Files expected to change**: [N files — list each one]
+- **Estimated lines of code**: ~X–Y total (Z new, W modified)
+- **Estimated implementation cost (Claude Sonnet 4.6 @ $3/MTok input · $15/MTok output)**:
+  - Input (context: CLAUDE.md + affected files + ticket): ~Xk tokens → ~$Y
+  - Output (code generation + tool responses): ~Xk tokens → ~$Y
+  - **Total estimate**: ~$X–$Y
+  *(Range reflects uncertainty in iteration count and context depth. Actual cost may vary.)*
 
 ## Open Questions
 [Anything that requires product or engineering decision before implementation can proceed.
