@@ -61,7 +61,13 @@ Actively scan the implementation for follow-up candidates. Check for each of:
 - **New tech debt**: temporary stubs, hardcoded values that should be configurable, inconsistencies introduced.
 - **Adjacent issues discovered**: bugs in nearby code seen but not fixed, naming or structural drift, dead code.
 
-For each item, write one line: `- **<short label>**: <one-sentence description, including file:line if relevant>`.
+For each item, write one line: `- **<short label>** [Critical / High / Medium / Low]: <one-sentence description, including file:line if relevant>`.
+
+Use this scale:
+- **Critical** — blocks a user flow, causes data loss or security exposure, or will break as soon as another ticket touches this code
+- **High** — meaningful user or developer impact; should be addressed in the next cycle
+- **Medium** — noticeable debt or gap, but workarounds exist; can be scheduled normally
+- **Low** — minor polish, cleanup, or nice-to-have; safe to defer indefinitely
 
 If genuinely none after scanning all five categories, write: "No follow-up items identified after scanning."
 ```
@@ -80,9 +86,15 @@ If genuinely none after scanning all five categories, write: "No follow-up items
 
 ### Step 7 — Surface follow-up items to the user separately
 
-After the ticket is closed, output the contents of the "Notes for Future Work" section back to the user as a standalone list under the heading **"Suggested follow-up tickets"**. This makes them actionable without re-reading the closing comment.
+After the ticket is closed, split the "Notes for Future Work" items by impact and output them under two separate headings:
 
-End the list with: "Want me to create tickets for any of these?"
+**"Needs immediate action"** — Critical and High items only. These should become tickets before or during the next sprint.
+
+**"Lower priority follow-ups"** — Medium and Low items. Listed for completeness but safe to defer.
+
+Omit a heading entirely if it has no items.
+
+End with: "Want me to create tickets for any of these?"
 
 If the "Notes for Future Work" section was "No follow-up items identified after scanning," skip this step entirely — do not print an empty list.
 

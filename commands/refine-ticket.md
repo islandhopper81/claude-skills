@@ -66,6 +66,7 @@ Analyze the ticket from each of the following perspectives. For each expert, ide
 - Are edge cases, error states, and failure modes covered?
 - Are there technical prerequisites (migrations, env vars, config) that must happen first?
 - Would an AI agent be able to write code directly from this ticket without asking a follow-up question?
+- **Scope expansion check:** Are there adjacent tasks that will predictably need to happen as a direct consequence of this change (e.g., cleaning up callers of a renamed function, adding an index for a new query, updating a related UI state)? For each one, ask: is there a substantive reason to defer this — a different team, an external dependency, a genuine priority trade-off — or is it simply absent from the original ticket description? If there's no good reason to exclude it, it belongs in the current ticket's Implementation Plan and Acceptance Criteria, not a future ticket.
 - **Complexity & size estimate:** Based on the implementation plan and codebase context, list the specific files expected to change and estimate lines of code (new + modified). Then assign a complexity category:
   - **Low** — 1–3 files, <100 LOC, single layer (e.g. UI-only or API-only), no schema changes, no new dependencies
   - **Medium** — 4–8 files, 100–300 LOC, spans 2 layers (e.g. API + DB or frontend + backend), may include a migration or new env var
@@ -138,9 +139,9 @@ If none: "No API or data contract changes."]
 - **Manual checks**: [Step-by-step actions to validate end-to-end]
 
 ## Out of Scope
-[Explicitly list what is NOT being built in this ticket.]
+[Items explicitly excluded from this ticket. Each item must have a substantive reason for deferral — a different team, an external dependency, or a deliberate priority trade-off. Items absent from the original ticket description but predictably needed should be pulled into the Implementation Plan instead, not listed here. For each item kept here, state the reason.]
 
-- ...
+- <item> — *Reason for deferral: <reason>*
 
 ## Dependencies & Prerequisites
 [Other tickets that must merge first, env vars that must exist, services that must be running.]
