@@ -6,13 +6,15 @@ Review code changes in the current branch and draft updates to affected document
 
 1. **Identify what changed** by running:
    ```
-   git diff main...HEAD --name-only
+   git diff {base-branch}...HEAD --name-only
    ```
+   Where `{base-branch}` is the default base branch defined in `CLAUDE.md` (e.g., `develop`).
+   Fall back to `main` only if CLAUDE.md does not specify a base branch.
    Review the list of changed files to understand the scope of the implementation.
 
 2. **Examine the diff** for changed files to understand what was added, modified, or removed:
    ```
-   git diff main...HEAD
+   git diff {base-branch}...HEAD
    ```
 
 3. **Infer which documents are affected** using these rules:

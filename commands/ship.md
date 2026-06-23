@@ -12,6 +12,18 @@ end-to-end execution — do not pause for confirmation between steps.
 
 ---
 
+## Step 0 — Fetch Ticket
+
+Before anything else, fetch the ticket **once** from the issue tracker (auto-detected from `CLAUDE.md`):
+- **Jira:** Use `getJiraIssue` requesting `fields: ["summary", "issuetype", "description"]`
+- **Linear:** Use `get_issue`
+
+Hold the result in context. The subsequent `branch` and `implement-ticket` steps must use
+this data and **must not re-fetch the ticket**. Passing it forward eliminates a redundant
+API round-trip and avoids loading the full ticket body a second time.
+
+---
+
 ## Step 1 — Branch
 
 Invoke the `branch` skill with the provided ticket ID.

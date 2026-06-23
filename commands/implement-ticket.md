@@ -46,7 +46,11 @@ Run `git status` and `git branch --show-current`.
 
 ### Step 4 — Fetch the ticket
 
-**Detect issue tracker** — Read `CLAUDE.md` and look for an `issue_tracker` field:
+If the ticket was already fetched earlier in this session (e.g., by `/ship`), **skip the
+API call** and use the data already in context. Re-fetching a ticket that is already in
+context wastes tokens without adding new information.
+
+If the ticket has not yet been fetched, detect the issue tracker from `CLAUDE.md`:
 - `issue_tracker: linear` → use Linear MCP tools
 - `issue_tracker: jira` → use Jira/Atlassian MCP tools
 - If not present, infer from context:

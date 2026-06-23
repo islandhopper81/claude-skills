@@ -52,3 +52,8 @@ Run the project test suite and provide an actionable summary.
 
 Always run tests non-interactively (e.g., `--no-watch`, `--ci` flags) so the command
 completes and returns output rather than entering watch mode.
+
+Prefer the basic test command (`npm test`, `pytest`) over coverage variants
+(`npm run coverage`, `pytest --cov`). Coverage reports add significant output to the
+context window without aiding pass/fail diagnosis. Only run the coverage command if
+the user explicitly requests it.

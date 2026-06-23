@@ -19,7 +19,10 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
 
 3. **Derive the short description**:
    - If provided as an argument, use it (lowercase, hyphen-separated).
-   - Otherwise, derive it from the ticket summary (max 4–5 words, lowercase, hyphens).
+   - If the ticket was already fetched earlier in this session (e.g., by `/ship`), use that
+     data — **do not fetch the ticket again**.
+   - Otherwise, fetch the ticket to read the summary, then derive a slug (max 4–5 words,
+     lowercase, hyphens).
    - Example: "Add ingredient substitution suggestions" → `ingredient-substitution-suggestions`
 
 4. **Create the branch and worktree** together from the default branch:
