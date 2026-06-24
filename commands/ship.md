@@ -1,18 +1,18 @@
----
+﻿---
 name: ship
-description: Full development cycle — branch, implement, test, docs, commit, PR, close ticket. Runs end-to-end without pausing for confirmation.
+description: Full development cycle -- branch, implement, test, docs, commit, PR, close ticket. Runs end-to-end without pausing for confirmation.
 ---
 
-# /ship — Ship a Ticket End-to-End
+# /ship -- Ship a Ticket End-to-End
 
 Usage: `/ship TICKET-ID` (e.g., `/ship AEN-87` or `/ship FF-42`)
 
 Run the full development cycle for a ticket autonomously. The user has opted into
-end-to-end execution — do not pause for confirmation between steps.
+end-to-end execution -- do not pause for confirmation between steps.
 
 ---
 
-## Step 0 — Fetch Ticket
+## Step 0 -- Fetch Ticket
 
 Before anything else, fetch the ticket **once** from the issue tracker (auto-detected from `CLAUDE.md`):
 - **Jira:** Use `getJiraIssue` requesting `fields: ["summary", "issuetype", "description"]`
@@ -24,7 +24,7 @@ API round-trip and avoids loading the full ticket body a second time.
 
 ---
 
-## Step 1 — Branch
+## Step 1 -- Branch
 
 Invoke the `branch` skill with the provided ticket ID.
 
@@ -34,21 +34,36 @@ Invoke the `branch` skill with the provided ticket ID.
 
 If there are uncommitted changes on the current branch, stop and report before proceeding.
 
+The `branch` skill creates a git worktree at `../{repo-name}-{TICKET-ID}`. Note the
+worktree path it reports -- you will switch into it before implementation.
+
 ---
 
-## Step 2 — Implement
+## Step 1.5 -- Enter Worktree
+
+After the `branch` skill completes, use the `EnterWorktree` tool to switch the working
+directory to the worktree the branch skill just created.
+
+- The worktree path is `../{repo-name}-{TICKET-ID}` (e.g., `../FeedTheFamily-FF-42`)
+- All subsequent steps (implement, test, docs, commit, PR) must run inside this worktree
+- Do **not** skip this step -- without it, subsequent steps operate on the original checkout
+  (typically `develop`) and will corrupt that branch
+
+---
+
+## Step 2 -- Implement
 
 Invoke the `implement-ticket` skill with the provided ticket ID.
 
-- Fetch the ticket from the issue tracker (auto-detected from `CLAUDE.md`)
+- The ticket data is already in context from Step 0 -- do not re-fetch
 - Explore the codebase, read all relevant files
 - Implement the changes exactly as specified in the ticket's implementation plan
 - Write or update tests as required by the ticket
-- **Skip the Phase 5 Handoff** — do not prompt the user at the end of `implement-ticket`; return control here and continue to Step 3.
+- **Skip the Phase 5 Handoff** -- do not prompt the user at the end of `implement-ticket`; return control here and continue to Step 3.
 
 ---
 
-## Step 3 — Test
+## Step 3 -- Test
 
 Invoke the `test` skill.
 
@@ -58,7 +73,7 @@ Invoke the `test` skill.
 
 ---
 
-## Step 4 — Update Docs
+## Step 4 -- Update Docs
 
 Invoke the `updatedocs` skill.
 
@@ -69,7 +84,7 @@ Invoke the `updatedocs` skill.
 
 ---
 
-## Step 5 — Commit
+## Step 5 -- Commit
 
 Invoke the `commit` skill.
 
@@ -79,7 +94,7 @@ Invoke the `commit` skill.
 
 ---
 
-## Step 6 — Pull Request
+## Step 6 -- Pull Request
 
 Invoke the `pr` skill.
 
@@ -89,13 +104,20 @@ Invoke the `pr` skill.
 
 ---
 
-## Step 7 — Close Ticket
+## Step 7 -- Close Ticket
 
 Invoke the `close-ticket` skill with the ticket ID.
 
 - Post an implementation summary comment on the ticket
 - Transition the ticket to Done
 - Surface any follow-up items identified during implementation
+
+---
+
+## Step 8 -- Exit Worktree
+
+After the ticket is closed, use the `ExitWorktree` tool to return to the original working
+directory.
 
 ---
 

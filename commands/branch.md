@@ -1,4 +1,4 @@
-# /branch — Create a Git Branch for a Ticket
+﻿# /branch -- Create a Git Branch for a Ticket
 
 Create a properly named git branch tied to a Jira ticket.
 
@@ -20,10 +20,10 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
 3. **Derive the short description**:
    - If provided as an argument, use it (lowercase, hyphen-separated).
    - If the ticket was already fetched earlier in this session (e.g., by `/ship`), use that
-     data — **do not fetch the ticket again**.
-   - Otherwise, fetch the ticket to read the summary, then derive a slug (max 4–5 words,
+     data -- **do not fetch the ticket again**.
+   - Otherwise, fetch the ticket to read the summary, then derive a slug (max 4-5 words,
      lowercase, hyphens).
-   - Example: "Add ingredient substitution suggestions" → `ingredient-substitution-suggestions`
+   - Example: "Add ingredient substitution suggestions" -> `ingredient-substitution-suggestions`
 
 4. **Create the branch and worktree** together from the default branch:
    ```
@@ -31,16 +31,36 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
    git worktree add -b {branch-name} ../{repo-name}-{TICKET-ID} origin/{default-branch}
    ```
    Where `{repo-name}` is the current directory name (e.g. `FeedTheFamily`).
-   This creates the branch and a linked working directory simultaneously —
+   This creates the branch and a linked working directory simultaneously --
    the current checkout is not disturbed.
 
-5. **Install dependencies** in the new worktree. Check which subdirectories exist
-   and run `npm install` in each:
+5. **Link node_modules** into the new worktree from the main repo to avoid a full reinstall.
+   For each package directory (`backend`, `frontend`) that exists in the main repo:
+   - Check whether `{main-repo}/{dir}/node_modules` exists. If it does not, skip that directory.
+   - Create a directory junction (Windows) or symlink (macOS/Linux) inside the worktree
+     pointing to the main repo's `node_modules`:
+
+   **Windows (PowerShell):**
+   ```powershell
+   New-Item -ItemType Junction `
+     -Path "..\{repo-name}-{TICKET-ID}\backend\node_modules" `
+     -Target ".\backend\node_modules"
+
+   New-Item -ItemType Junction `
+     -Path "..\{repo-name}-{TICKET-ID}\frontend\node_modules" `
+     -Target ".\frontend\node_modules"
    ```
-   cd ../{repo-name}-{TICKET-ID}/backend && npm install
-   cd ../{repo-name}-{TICKET-ID}/frontend && npm install
+
+   **macOS / Linux:**
+   ```bash
+   ln -s "$(pwd)/backend/node_modules"  "../{repo-name}-{TICKET-ID}/backend/node_modules"
+   ln -s "$(pwd)/frontend/node_modules" "../{repo-name}-{TICKET-ID}/frontend/node_modules"
    ```
-   Skip any subdirectory that does not exist.
+
+   This means both the main checkout and the worktree share the same installed packages --
+   no duplicate `node_modules` directories, no install time. If tests later fail with
+   "Cannot find module" errors, run `npm install` inside the affected directory of the
+   worktree to get a fresh, independent install.
 
 6. **Push the branch** to the remote to establish tracking:
    ```
@@ -53,5 +73,5 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
    - Confirmation the branch is pushed and tracking
    - Prompt: "Branch and worktree are ready at `../{repo-name}-{TICKET-ID}`. Open that directory to begin implementation, then run `/test` when ready to validate."
 
-Do not create the worktree if a worktree for that branch already exists —
+Do not create the worktree if a worktree for that branch already exists --
 check with `git worktree list` first and warn the user if so.
