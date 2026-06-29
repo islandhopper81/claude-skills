@@ -75,3 +75,42 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
 
 Do not create the worktree if a worktree for that branch already exists --
 check with `git worktree list` first and warn the user if so.
+
+---
+
+## Worktree Teardown (when deleting the worktree)
+
+**Windows only — critical:** `Remove-Item -Recurse` follows directory junctions and will
+delete the real `node_modules` contents in the main repo. Always remove the junction points
+first (without `-Recurse`) before deleting the worktree directory:
+
+```powershell
+# Step 1: Unlink junctions (no -Recurse — just removes the pointer, not the target)
+Remove-Item "..\{repo-name}-{TICKET-ID}\backend\node_modules"
+Remove-Item "..\{repo-name}-{TICKET-ID}\frontend\node_modules"
+
+# Step 2: Now safe to delete the rest of the worktree directory
+Remove-Item -Recurse -Force "..\{repo-name}-{TICKET-ID}"
+
+# Step 3: Prune the git worktree reference
+git worktree prune
+
+# Step 4: Delete the local branch
+git branch -d {branch-name}
+```
+
+**macOS / Linux:** Symlinks are not followed by `rm -rf`, so teardown is safe without the
+extra step. But removing them first is still good hygiene:
+
+```bash
+rm "../{repo-name}-{TICKET-ID}/backend/node_modules"
+rm "../{repo-name}-{TICKET-ID}/frontend/node_modules"
+git worktree remove "../{repo-name}-{TICKET-ID}" --force
+git branch -d {branch-name}
+```
+
+If `node_modules` in the main repo is accidentally wiped on Windows, restore with:
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
