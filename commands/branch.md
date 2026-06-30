@@ -34,33 +34,18 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
    This creates the branch and a linked working directory simultaneously --
    the current checkout is not disturbed.
 
-5. **Link node_modules** into the new worktree from the main repo to avoid a full reinstall.
-   For each package directory (`backend`, `frontend`) that exists in the main repo:
-   - Check whether `{main-repo}/{dir}/node_modules` exists. If it does not, skip that directory.
-   - Create a directory junction (Windows) or symlink (macOS/Linux) inside the worktree
-     pointing to the main repo's `node_modules`:
+5. **Install node_modules** in the new worktree by running `npm install` directly in each
+   package directory. Do NOT create directory junctions or symlinks pointing at the main
+   repo's `node_modules` — junctions are fragile on Windows: if the main repo's
+   `node_modules` is ever impaired (e.g. from a root-level `npm install` mistake or a
+   prior bad teardown), every worktree sharing it breaks too.
 
-   **Windows (PowerShell):**
    ```powershell
-   New-Item -ItemType Junction `
-     -Path "..\{repo-name}-{TICKET-ID}\backend\node_modules" `
-     -Target ".\backend\node_modules"
-
-   New-Item -ItemType Junction `
-     -Path "..\{repo-name}-{TICKET-ID}\frontend\node_modules" `
-     -Target ".\frontend\node_modules"
+   cd "..\{repo-name}-{TICKET-ID}\backend"; npm install
+   cd "..\{repo-name}-{TICKET-ID}\frontend"; npm install
    ```
 
-   **macOS / Linux:**
-   ```bash
-   ln -s "$(pwd)/backend/node_modules"  "../{repo-name}-{TICKET-ID}/backend/node_modules"
-   ln -s "$(pwd)/frontend/node_modules" "../{repo-name}-{TICKET-ID}/frontend/node_modules"
-   ```
-
-   This means both the main checkout and the worktree share the same installed packages --
-   no duplicate `node_modules` directories, no install time. If tests later fail with
-   "Cannot find module" errors, run `npm install` inside the affected directory of the
-   worktree to get a fresh, independent install.
+   With npm's local cache these installs typically complete in under 60 seconds each.
 
 6. **Push the branch** to the remote to establish tracking:
    ```
@@ -80,37 +65,22 @@ check with `git worktree list` first and warn the user if so.
 
 ## Worktree Teardown (when deleting the worktree)
 
-**Windows only — critical:** `Remove-Item -Recurse` follows directory junctions and will
-delete the real `node_modules` contents in the main repo. Always remove the junction points
-first (without `-Recurse`) before deleting the worktree directory:
+Because the worktree has its own real `node_modules` directories (not junctions),
+`Remove-Item -Recurse` is safe to run directly on Windows:
 
 ```powershell
-# Step 1: Unlink junctions (no -Recurse — just removes the pointer, not the target)
-Remove-Item "..\{repo-name}-{TICKET-ID}\backend\node_modules"
-Remove-Item "..\{repo-name}-{TICKET-ID}\frontend\node_modules"
-
-# Step 2: Now safe to delete the rest of the worktree directory
+# Delete the worktree directory
 Remove-Item -Recurse -Force "..\{repo-name}-{TICKET-ID}"
 
-# Step 3: Prune the git worktree reference
+# Prune the git worktree reference
 git worktree prune
 
-# Step 4: Delete the local branch
+# Delete the local branch
 git branch -d {branch-name}
 ```
 
-**macOS / Linux:** Symlinks are not followed by `rm -rf`, so teardown is safe without the
-extra step. But removing them first is still good hygiene:
-
+**macOS / Linux:**
 ```bash
-rm "../{repo-name}-{TICKET-ID}/backend/node_modules"
-rm "../{repo-name}-{TICKET-ID}/frontend/node_modules"
 git worktree remove "../{repo-name}-{TICKET-ID}" --force
 git branch -d {branch-name}
-```
-
-If `node_modules` in the main repo is accidentally wiped on Windows, restore with:
-```bash
-cd backend && npm install
-cd ../frontend && npm install
 ```

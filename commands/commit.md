@@ -41,9 +41,37 @@ Stage all current changes and commit them with an auto-generated conventional co
    commits and ask the user how to proceed before committing.
 
 4. **Stage all changes and commit**:
+
+   For single-line messages:
    ```
    git add -A
-   git commit -m "{generated message}"
+   git commit -m "type(scope): short description"
+   ```
+
+   For multi-line messages on **Windows (PowerShell)**, use a here-string (`@'...'@`).
+   Never use bash `<<'EOF'` heredoc syntax — it is not valid PowerShell:
+   ```powershell
+   git add -A
+   git commit -m @'
+   type(scope): short description
+
+   Longer body explaining the why.
+
+   Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+   '@
+   ```
+
+   On **macOS / Linux (bash)**:
+   ```bash
+   git add -A
+   git commit -m "$(cat <<'EOF'
+   type(scope): short description
+
+   Longer body explaining the why.
+
+   Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+   EOF
+   )"
    ```
 
 5. **Push the commit** to the remote tracking branch:

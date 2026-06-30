@@ -38,11 +38,26 @@ Create a pull request for the current branch targeting the default branch (main)
    Closes {TICKET-ID}
    ```
 
-4. **Create the pull request** via the GitHub MCP:
-   - Title: derived from the ticket summary or branch name
-   - Base branch: `main` (or as defined in `CLAUDE.md`)
-   - Head branch: current branch
-   - Body: the generated description above
+4. **Create the pull request** using `gh pr create`. Write the body to a temp file
+   and pass it via `--body-file` — do NOT pass multi-line content with `--body "..."`,
+   which fails in PowerShell due to heredoc syntax incompatibility.
+
+   ```powershell
+   # Write body to a temp file first
+   Set-Content -Path "$env:TEMP\pr-body.md" -Value @'
+   ## Summary
+   ...
+   '@ -Encoding utf8
+
+   gh pr create `
+     --title "type(TICKET-ID): short description" `
+     --base develop `
+     --body-file "$env:TEMP\pr-body.md"
+   ```
+
+   Options:
+   - Base branch: as defined in `CLAUDE.md` (default: `develop`)
+   - Head branch: current branch (automatic)
    - Draft: false (ready for review unless user specifies otherwise)
 
 5. **Report back** with:
