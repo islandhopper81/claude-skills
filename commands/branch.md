@@ -25,31 +25,53 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
      lowercase, hyphens).
    - Example: "Add ingredient substitution suggestions" -> `ingredient-substitution-suggestions`
 
-4. **Create the branch and worktree** together from the default branch:
-   ```
+4. **Create the branch and worktree** together from the default branch.
+   **On Windows use the PowerShell tool for this step** — the Bash tool treats `\` as an
+   escape character, causing the worktree path to resolve inside the current directory
+   instead of the parent. Use forward slashes in the path argument; Git on Windows accepts
+   them in both tools.
+
+   ```powershell
    git fetch origin
-   git worktree add -b {branch-name} ../{repo-name}-{TICKET-ID} origin/{default-branch}
+   git worktree add -b {branch-name} "../{repo-name}-{TICKET-ID}" origin/{default-branch}
    ```
+
    Where `{repo-name}` is the current directory name (e.g. `FeedTheFamily`).
    This creates the branch and a linked working directory simultaneously --
    the current checkout is not disturbed.
 
-5. **Install node_modules** in the new worktree by running `npm install` directly in each
-   package directory. Do NOT create directory junctions or symlinks pointing at the main
-   repo's `node_modules` — junctions are fragile on Windows: if the main repo's
-   `node_modules` is ever impaired (e.g. from a root-level `npm install` mistake or a
-   prior bad teardown), every worktree sharing it breaks too.
+5. **Install dependencies** in the new worktree. **Use the PowerShell tool for this step
+   on Windows.** Do not assume a fixed layout — projects differ (e.g. FeedTheFamily has
+   `backend/` + `frontend/`; ProductOne/spec has a Python backend in `src/` and a Next.js
+   frontend in `webapp/`). If `CLAUDE.md` defines a "Worktree Setup" recipe, follow it.
+   Otherwise, per package manager present:
+
+   **Node packages** — run `npm install` in *every directory that contains a
+   `package.json`* (detect them; do not hardcode `backend`/`frontend`).
 
    ```powershell
-   cd "..\{repo-name}-{TICKET-ID}\backend"; npm install
-   cd "..\{repo-name}-{TICKET-ID}\frontend"; npm install
+   # Example — repeat for each package.json directory the repo actually has
+   cd "..\{repo-name}-{TICKET-ID}\{package-dir}"; npm install
    ```
 
-   With npm's local cache these installs typically complete in under 60 seconds each.
+   Do NOT create directory junctions or symlinks pointing at the main repo's
+   `node_modules` — junctions are fragile on Windows: if the main repo's `node_modules`
+   is ever impaired (e.g. from a root-level `npm install` mistake or a prior bad
+   teardown), every worktree sharing it breaks too. With npm's local cache a fresh
+   install typically completes in under 60 seconds per package.
 
-6. **Push the branch** to the remote to establish tracking:
-   ```
-   cd ../{repo-name}-{TICKET-ID} && git push -u origin {branch-name}
+   **Python backend** — the worktree does **not** get its own virtualenv; it shares the
+   main checkout's `.venv`. Do not run a package install here. Note the resolution
+   caveat: because that venv is an *editable install*, `import <pkg>` resolves to the
+   **main checkout**, not the worktree. When you later run venv-backed tools against
+   worktree code (alembic, code generation, dump scripts), set `PYTHONPATH` to the
+   worktree root so they exercise the worktree's code, and verify with
+   `python -c "import <pkg>; print(<pkg>.__file__)"`. (`pytest` is the exception — it
+   prepends the worktree root itself when the test directory is a package.)
+
+6. **Push the branch** to the remote to establish tracking (PowerShell tool):
+   ```powershell
+   cd "..\{repo-name}-{TICKET-ID}"; git push -u origin {branch-name}
    ```
 
 7. **Report back** with:
@@ -65,7 +87,8 @@ check with `git worktree list` first and warn the user if so.
 
 ## Worktree Teardown (when deleting the worktree)
 
-Because the worktree has its own real `node_modules` directories (not junctions),
+Because the worktree owns its own dependency directories if any (real `node_modules`,
+not junctions into the main checkout) and shares no virtualenv with it,
 `Remove-Item -Recurse` is safe to run directly on Windows:
 
 ```powershell

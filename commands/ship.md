@@ -48,6 +48,11 @@ directory to the worktree the branch skill just created.
 - All subsequent steps (implement, test, docs, commit, PR) must run inside this worktree
 - Do **not** skip this step -- without it, subsequent steps operate on the original checkout
   (typically `develop`) and will corrupt that branch
+- **Shell cwd caveat:** on Windows the PowerShell tool resets its working directory to the
+  original checkout between calls, so `EnterWorktree` does **not** govern shell cwd. In every
+  shell command that must act on the worktree, `cd` into it explicitly (or use
+  `git -C "{worktree-path}"`). Relying on `EnterWorktree` alone will silently run commands
+  against the original checkout.
 
 ---
 
