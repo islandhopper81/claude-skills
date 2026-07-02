@@ -110,6 +110,9 @@ Add or update tests as specified in the ticket's Test Requirements section.
 
 Run the test command(s) from `CLAUDE.md` (e.g., `pytest`, `npm run build`).
 
+- If running inside a git worktree (e.g. invoked by `/ship`), a Python test command needs
+  the **main checkout's** venv plus `PYTHONPATH` pinned to the worktree root — see the venv
+  note in `/branch` Step 5 — otherwise `src` resolves to the main checkout, not your changes.
 - If tests pass: proceed to Step 9.
 - If tests fail: diagnose and fix. Do not move forward with failing tests.
 - If you cannot make a test pass and are unsure why, stop and explain the blocker to the user — do not paper over it.

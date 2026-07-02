@@ -19,25 +19,45 @@ Run the project test suite and provide an actionable summary.
      activate it first:
      - Windows PowerShell: `.\.venv\Scripts\Activate.ps1`
      - POSIX shells: `source .venv/bin/activate`
-   - If no `.venv/` exists, run the test command as-is. If it then fails with
-     `ModuleNotFoundError` for a project dependency (e.g. `No module named 'boto3'`),
-     report the missing-venv diagnosis instead of treating it as a real test failure.
+   - **If there is no local `.venv/` but the current directory is a linked git worktree**
+     (as created by `/branch` and `/ship`), the venv lives in the **main checkout**, not
+     here. Do not fall through to system Python. Find the main worktree with
+     `git worktree list` (its first entry is the main checkout) and use *its* interpreter
+     directly — e.g. `<main-checkout>\.venv\Scripts\python.exe -m pytest` (Windows) or
+     `<main-checkout>/.venv/bin/python -m pytest` (POSIX). Because that venv is an editable
+     install, also set `PYTHONPATH` to the **worktree root** so the project package resolves
+     to the worktree's code, not the main checkout's:
+     - Windows PowerShell: `$env:PYTHONPATH = "<worktree-root>"; & "<main-checkout>\.venv\Scripts\python.exe" -m pytest`
+     - POSIX shells: `PYTHONPATH=<worktree-root> <main-checkout>/.venv/bin/python -m pytest`
+
+     (`pytest` prepends the worktree root itself when the test directory is a package, so
+     collection usually works even without `PYTHONPATH`; set it anyway to be safe for tools
+     that don't, such as code generators or migration runners.)
+   - If no `.venv/` exists anywhere (not a worktree, no main-checkout venv), run the test
+     command as-is. If it then fails with `ModuleNotFoundError` for a project dependency
+     (e.g. `No module named 'boto3'`), report the missing-venv diagnosis instead of treating
+     it as a real test failure.
 
 3. **Run the tests** and capture full output.
 
 4. **If the output contains `Cannot find module` errors** (Node.js missing-dependency
-   failures), check whether the affected `node_modules` directory is a shared link from
-   a worktree setup before treating this as a real test failure:
+   failures): the current `/branch` and `/ship` flow gives each worktree its own **real**
+   `node_modules` (no junctions), so this is normally a genuine failure — treat it as one
+   and continue to step 5. The one exception is a worktree created by an older,
+   junction-based strategy; only in that case does the recovery below apply.
 
-   - **Windows:** `(Get-Item "backend\node_modules").LinkType` -- returns "Junction" if linked
-   - **macOS/Linux:** `test -L backend/node_modules && echo linked`
+   Check whether the affected package's `node_modules` is a shared link (substitute the
+   actual package directory — e.g. `webapp`, `backend`, `frontend` — for `{pkg}`):
+
+   - **Windows:** `(Get-Item "{pkg}\node_modules").LinkType` -- returns "Junction" if linked
+   - **macOS/Linux:** `test -L {pkg}/node_modules && echo linked`
 
    If the directory **is** a junction or symlink, the worktree is sharing node_modules
    from the main checkout and a new package is missing there. Recover automatically:
 
    a. Delete the junction/symlink using the .NET API (avoids shell hook interference):
-      - Windows: `[System.IO.Directory]::Delete(".\backend\node_modules")` (or `.\frontend\node_modules`)
-      - macOS/Linux: `unlink backend/node_modules` (or `frontend/node_modules`)
+      - Windows: `[System.IO.Directory]::Delete(".\{pkg}\node_modules")`
+      - macOS/Linux: `unlink {pkg}/node_modules`
 
    b. Run `npm install` in the affected directory inside the worktree.
 
