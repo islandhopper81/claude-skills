@@ -1,25 +1,32 @@
 # /refine-ticket — Refine a Ticket for AI Agent Implementation
 
-Usage: `/refine-ticket [TICKET-ID]` (e.g., `/refine-ticket AEN-87` or `/refine-ticket FTF-42`)
+Usage: `/refine-ticket [TICKET-ID]` (e.g., `/refine-ticket AEN-87`, `/refine-ticket FTF-42`, or `/refine-ticket 12` / `/refine-ticket #12` for GitHub Issues)
 
-Refine a ticket so it is unambiguous and immediately implementable by a senior software engineer AI agent, without needing follow-up clarification. Auto-detects Linear or Jira from `CLAUDE.md`.
+Refine a ticket so it is unambiguous and immediately implementable by a senior software engineer AI agent, without needing follow-up clarification. Auto-detects GitHub, Linear, or Jira from `CLAUDE.md`.
 
 ## Instructions
 
 ### Step 1 — Detect issue tracker
 
 Read `CLAUDE.md` in the project root. Look for an `issue_tracker` field:
+- `issue_tracker: github` → use the GitHub CLI (`gh`)
 - `issue_tracker: linear` → use Linear MCP tools
 - `issue_tracker: jira` → use Jira/Atlassian MCP tools
-- If not present, infer from the ticket ID format:
+- If not present, infer from the ticket ID format and repo:
+  - Bare number or `#`-prefixed number (e.g. `12`, `#12`), or a `github.com/.../issues/N` URL → assume **GitHub**
   - All-caps team prefix + number (e.g. `AEN-87`, `ENG-12`) with no Jira project key in `CLAUDE.md` → assume **Linear**
   - If `jira_project_key` is defined in `CLAUDE.md` → assume **Jira**
-- If still ambiguous, ask: "Is this a Linear or Jira ticket?"
+  - Tiebreaker: if `git remote -v` points only to github.com and no `jira_project_key` or Linear config is present → assume **GitHub**
+- If still ambiguous, ask: "Is this a GitHub, Linear, or Jira ticket?"
+
+Confirm `gh` is available and authenticated before using it (`gh auth status`). If the GitHub tracker is selected but `gh` is missing or unauthenticated, tell the user how to fix it rather than falling back silently.
 
 ### Step 2 — Fetch the ticket
 
 If a ticket ID is provided as `$ARGUMENTS`, use it. Otherwise ask: "Which ticket would you like to refine?"
 
+**GitHub:** Normalize the ID first (strip a leading `#`; accept a bare number or a full issue URL). Fetch with the `gh` CLI:
+`gh issue view <N> --json number,title,body,labels,milestone,url`
 **Linear:** Use the Linear MCP `get_issue` tool.
 **Jira:** Use the Atlassian MCP `getJiraIssue` tool.
 
@@ -174,6 +181,14 @@ Do not update the tracker until the user explicitly approves.
 ### Step 7 — Update the tracker and apply label
 
 Once approved:
+
+**GitHub:**
+1. Write the refined ticket body to a temp file, then update the issue:
+   `gh issue edit <N> --body-file <tmpfile>`
+   (Use `--body-file`, not `--body`, so multi-line markdown — headings, task lists — is preserved.)
+2. Ensure the `refined` label exists, then apply it (GitHub colors omit the leading `#`):
+   `gh label create refined --color 7C3AED --description "Ticket has been refined and is ready for implementation" --force`
+   `gh issue edit <N> --add-label refined`
 
 **Linear:**
 1. Update the ticket description using the Linear MCP `save_issue` tool.
