@@ -2,19 +2,21 @@
 
 Usage: `/close-ticket` or `/close-ticket AEN-87 "optional notes"`
 
-Wrap up the ticket by documenting what happened, surfacing follow-up items, and transitioning it to Done. Auto-detects Linear or Jira from `CLAUDE.md`.
+Wrap up the ticket by documenting what happened, surfacing follow-up items, and transitioning it to Done. Auto-detects GitHub, Linear, or Jira from `CLAUDE.md`.
 
 ## Instructions
 
 ### Step 1 — Detect issue tracker
 
 Read `CLAUDE.md` in the project root. Look for an `issue_tracker` field:
+- `issue_tracker: github` → use the GitHub CLI (`gh issue comment`, `gh issue close`)
 - `issue_tracker: linear` → use Linear MCP tools (`save_comment`, `save_issue` with `state: "Done"`)
 - `issue_tracker: jira` → use Atlassian MCP tools (`addCommentToJiraIssue`, `transitionJiraIssue`)
 - If not present, infer from the ticket ID format:
+  - Bare number or `#`-prefixed number (e.g. `12`, `#12`), or a github.com-only remote → assume **GitHub**
   - All-caps team prefix + number (e.g. `AEN-87`, `ENG-12`) with no Jira project key in `CLAUDE.md` → assume **Linear**
   - If `jira_project_key` is defined in `CLAUDE.md` → assume **Jira**
-- If still ambiguous, ask: "Is this a Linear or Jira ticket?"
+- If still ambiguous, ask: "Is this a GitHub, Linear, or Jira ticket?"
 
 ### Step 2 — Determine the ticket ID
 
@@ -74,11 +76,21 @@ If genuinely none after scanning all five categories, write: "No follow-up items
 
 ### Step 5 — Post the comment
 
+**GitHub:** Write the composed comment to a temp file and post it: `gh issue comment <N> --body-file <tmpfile>`.
+
 **Linear:** Use the Linear MCP `save_comment` tool with `issueId` set to the ticket ID and `body` set to the composed comment.
 
 **Jira:** Use the Atlassian MCP `addCommentToJiraIssue` tool.
 
 ### Step 6 — Transition the ticket to Done
+
+**GitHub:** Close the issue and move its board card to Done:
+1. `gh issue close <N>` — closing auto-drops the card out of the active columns.
+2. If the issue is on a Projects board, also set its `Status` field to **Done** so the board stays accurate (closing alone does not set Status). Resolve the project from `CLAUDE.md` (`github_project`) or `gh project list --owner <owner>`, then:
+   - Find the item id for this issue: `gh project item-list <project-number> --owner <owner> --format json` (match `.content.number == <N>`).
+   - Read the `Status` field id and its `Done` option id: `gh project field-list <project-number> --owner <owner> --format json`.
+   - Set it: `gh project item-edit --project-id <PID> --id <ITEM_ID> --field-id <STATUS_FIELD_ID> --single-select-option-id <DONE_OPTION_ID>`.
+   If the issue is not linked to any project, skip this sub-step (the `gh issue close` in step 1 is sufficient).
 
 **Linear:** Use the Linear MCP `save_issue` tool with `id` set to the ticket ID and `state` set to `"Done"`.
 

@@ -38,6 +38,10 @@ Create a pull request for the current branch targeting the default branch (main)
    Closes {TICKET-ID}
    ```
 
+   For **GitHub** issues, the closing line must be `Closes #{number}` (e.g. `Closes #12`)
+   so the merged PR auto-closes the linked issue. For Jira/Linear, use the plain ticket
+   key as their GitHub integration expects.
+
 4. **Create the pull request** using `gh pr create`. Write the body to a temp file
    and pass it via `--body-file` — do NOT pass multi-line content with `--body "..."`,
    which fails in PowerShell due to heredoc syntax incompatibility.
@@ -64,4 +68,4 @@ Create a pull request for the current branch targeting the default branch (main)
    - The PR URL
    - PR number
    - Prompt: "PR is open. Run `/close-ticket` to add the implementation summary
-     to the Jira ticket and move it to Done."
+     to the ticket and move it to Done."

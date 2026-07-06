@@ -1,11 +1,11 @@
 ---
 name: implement-ticket
-description: Implement a Linear ticket end-to-end — branch, read ticket, explore codebase, write code, run tests.
+description: Implement a ticket end-to-end (GitHub, Linear, or Jira) — branch, read ticket, explore codebase, write code, run tests.
 ---
 
-# /implement-ticket — Implement a Linear Ticket
+# /implement-ticket — Implement a Ticket
 
-Usage: `/implement-ticket [TICKET-ID]` (e.g., `/implement-ticket AEN-87`)
+Usage: `/implement-ticket [TICKET-ID]` (e.g., `/implement-ticket AEN-87` or `/implement-ticket 12` for GitHub Issues)
 
 Act as a senior software engineer. Read the ticket, understand the codebase, implement the changes precisely, and verify the work.
 
@@ -51,13 +51,16 @@ API call** and use the data already in context. Re-fetching a ticket that is alr
 context wastes tokens without adding new information.
 
 If the ticket has not yet been fetched, detect the issue tracker from `CLAUDE.md`:
+- `issue_tracker: github` → use the GitHub CLI (`gh`)
 - `issue_tracker: linear` → use Linear MCP tools
 - `issue_tracker: jira` → use Jira/Atlassian MCP tools
 - If not present, infer from context:
+  - Bare/`#`-prefixed number ticket ID, or a github.com-only remote with no `linear_team`/`jira_project_key` → assume **GitHub**
   - `linear_team` defined in `CLAUDE.md` → assume **Linear**
   - `jira_project_key` or `Jira Project Key` defined in `CLAUDE.md` → assume **Jira**
-- If still ambiguous, ask: "Is this a Linear or Jira project?"
+- If still ambiguous, ask: "Is this a GitHub, Linear, or Jira project?"
 
+**GitHub:** Fetch using `gh issue view <N> --json number,title,body,labels,milestone,url` (confirm `gh auth status` first).
 **Linear:** Fetch using the `get_issue` MCP tool.
 **Jira:** Fetch using the Atlassian `getJiraIssue` MCP tool.
 

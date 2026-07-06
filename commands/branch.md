@@ -1,8 +1,8 @@
 ﻿# /branch -- Create a Git Branch for a Ticket
 
-Create a properly named git branch tied to a Jira ticket.
+Create a properly named git branch tied to a ticket (GitHub, Jira, or Linear).
 
-Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-description`
+Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-description` (GitHub issues use the bare number, e.g. `/branch 12 short-description`)
 
 ## Instructions
 
@@ -17,12 +17,17 @@ Usage: `/branch` (uses ticket ID from this session) or `/branch FTF-42 short-des
    - `chore/{TICKET-ID}-{short-description}` for Tasks
    - `spike/{TICKET-ID}-{short-description}` for Spikes
 
+   The prefix is chosen from the ticket's type. GitHub issues have no "type" field —
+   infer the prefix from the issue's labels (`bug` → `fix/`; `chore`/`infra` → `chore/`;
+   otherwise `feat/`), and use the bare issue number as `{TICKET-ID}` (e.g. `feat/12-config-adapter`).
+
 3. **Derive the short description**:
    - If provided as an argument, use it (lowercase, hyphen-separated).
    - If the ticket was already fetched earlier in this session (e.g., by `/ship`), use that
      data -- **do not fetch the ticket again**.
    - Otherwise, fetch the ticket to read the summary, then derive a slug (max 4-5 words,
-     lowercase, hyphens).
+     lowercase, hyphens). Fetch via the detected tracker — GitHub:
+     `gh issue view <N> --json title,labels`; Linear/Jira: their MCP fetch tools.
    - Example: "Add ingredient substitution suggestions" -> `ingredient-substitution-suggestions`
 
 4. **Create the branch and worktree** together from the default branch.

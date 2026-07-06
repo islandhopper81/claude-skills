@@ -5,7 +5,7 @@ description: Full development cycle -- branch, implement, test, docs, commit, PR
 
 # /ship -- Ship a Ticket End-to-End
 
-Usage: `/ship TICKET-ID` (e.g., `/ship AEN-87` or `/ship FF-42`)
+Usage: `/ship TICKET-ID` (e.g., `/ship AEN-87`, `/ship FF-42`, or `/ship 12` / `/ship #12` for GitHub Issues)
 
 Run the full development cycle for a ticket autonomously. The user has opted into
 end-to-end execution -- do not pause for confirmation between steps.
@@ -14,7 +14,8 @@ end-to-end execution -- do not pause for confirmation between steps.
 
 ## Step 0 -- Fetch Ticket
 
-Before anything else, fetch the ticket **once** from the issue tracker (auto-detected from `CLAUDE.md`):
+Before anything else, fetch the ticket **once** from the issue tracker (auto-detected from `CLAUDE.md`; if absent, infer: bare/`#`-prefixed number or a github.com-only remote → **GitHub**; prefixed key like `AEN-87`/`FF-42` → Linear/Jira per `linear_team`/`jira_project_key`):
+- **GitHub:** Use `gh issue view <N> --json number,title,body,labels,milestone,url` (strip a leading `#`; accept a bare number or a full issue URL). Confirm `gh auth status` first; if `gh` is missing/unauthenticated, stop and report.
 - **Jira:** Use `getJiraIssue` requesting `fields: ["summary", "issuetype", "description"]`
 - **Linear:** Use `get_issue`
 
