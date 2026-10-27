@@ -1,0 +1,14 @@
+{
+  "name": "islandhopper-workflows",
+  "owner": {
+    "name": "islandhopper81"
+  },
+  "plugins": [
+    {
+      "name": "developer-workflows",
+      "source": "./",
+      "description": "Project-aware development workflows",
+      "version": "1.0.0"
+    }
+  ]
+}

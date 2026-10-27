@@ -1,0 +1,137 @@
+---
+name: implement-ticket
+description: "Use when the user requests the implement-ticket workflow for the current project; follow project conventions and the shared execution context."
+---
+
+Read ../../references/project-context.md relative to this skill before acting. Resolve sibling workflows by reading ../<name>/SKILL.md relative to this skill, not by assuming slash commands exist. Treat supplied user arguments as input; in a composed workflow reuse the caller's ticket and context. When called by ship, return control without prompting for the next command. Use available host tools or authenticated service connectors; Claude tool names are examples, not requirements.
+
+
+# /implement-ticket — Implement a Ticket
+
+Usage: `/implement-ticket [TICKET-ID]` (e.g., `/implement-ticket AEN-87` or `/implement-ticket 12` for GitHub Issues)
+
+Act as a senior software engineer. Read the ticket, understand the codebase, implement the changes precisely, and verify the work.
+
+---
+
+## Phase 1 — Setup
+
+### Step 1 — Resolve the ticket ID
+
+- If a ticket ID is provided as `<user arguments>`, use it.
+- Otherwise ask: "Which ticket would you like to implement? (e.g., AEN-87)"
+
+### Step 2 — Read project conventions
+
+Read `CLAUDE.md` in the project root. Note:
+- Repo structure (which directories contain backend, frontend, tests)
+- Tech stack and frameworks
+- Test commands
+- Branch naming convention and base branch
+
+### Step 3 — Check git state
+
+If the caller supplied a ticket working directory, verify it and continue there. Otherwise read ../branch/SKILL.md and establish a branch using the resolved base; preserve unrelated changes.
+
+---
+
+## Phase 2 — Understand
+
+### Step 4 — Fetch the ticket
+
+If the ticket was already fetched earlier in this session (e.g., by `/ship`), **skip the
+API call** and use the data already in context. Re-fetching a ticket that is already in
+context wastes tokens without adding new information.
+
+If the ticket has not yet been fetched, detect the issue tracker from `CLAUDE.md`:
+- `issue_tracker: github` → use the GitHub CLI (`gh`)
+- `issue_tracker: linear` → use Linear MCP tools
+- `issue_tracker: jira` → use Jira/Atlassian MCP tools
+- If not present, infer from context:
+  - Bare/`#`-prefixed number ticket ID, or a github.com-only remote with no `linear_team`/`jira_project_key` → assume **GitHub**
+  - `linear_team` defined in `CLAUDE.md` → assume **Linear**
+  - `jira_project_key` or `Jira Project Key` defined in `CLAUDE.md` → assume **Jira**
+- If still ambiguous, ask: "Is this a GitHub, Linear, or Jira project?"
+
+**GitHub:** Fetch using `gh issue view <N> --json number,title,body,labels,milestone,url` (confirm `gh auth status` first).
+**Linear:** Fetch using the `get_issue` MCP tool.
+**Jira:** Fetch using the Atlassian `getJiraIssue` MCP tool.
+
+Read the entire ticket:
+- Summary and background
+- Implementation plan (treat it as the authoritative spec — follow it step by step)
+- Acceptance criteria (these are your definition of done)
+- Test requirements
+- Out of scope (do not implement anything listed here)
+- Dependencies and prerequisites (verify they are met before proceeding)
+
+### Step 5 — Explore the codebase
+
+Read every file named in the ticket's "Relevant files" or "Implementation Plan" sections. Then:
+- Identify all files that will need to change
+- Read the current content of each file in full
+- Read related files for context (e.g., models referenced by the service being changed, existing tests for the module being modified)
+- Run a targeted search (Grep) for any symbol, function, or pattern the ticket references that you haven't already read
+
+Do not skip this step. Attempting implementation without reading the code produces incorrect results.
+
+---
+
+## Phase 3 — Implement
+
+### Step 6 — Execute the implementation plan
+
+Follow the ticket's Implementation Plan in the stated order. For each step:
+- Make only the changes described — no refactoring, no scope creep, no "while I'm in here" improvements
+- Prefer editing existing files over creating new ones
+- Write no comments unless the code encodes a non-obvious constraint or workaround
+- Do not add error handling for scenarios the ticket marks out of scope
+- Match existing code style (naming, formatting, import ordering) in each file
+
+After each logical group of changes (e.g., completing one step of the implementation plan), verify the change is internally consistent before moving to the next step.
+
+### Step 7 — Write tests
+
+Add or update tests as specified in the ticket's Test Requirements section.
+- Place tests in the file and location identified by the ticket (or the project's existing test layout)
+- Cover every test case named in the ticket — do not skip or abbreviate
+- Follow existing test patterns in the file (fixtures, mocking approach, assertion style)
+- Do not add tests for scenarios the ticket marks out of scope
+
+---
+
+## Phase 4 — Verify
+
+### Step 8 — Run the test suite
+
+When composed by ship, return the implementation and required check list to ship and skip this phase; ship runs verification once. Standalone, use ../test/SKILL.md.
+
+Run the test command(s) from `CLAUDE.md` (e.g., `pytest`, `npm run build`).
+
+- Follow the project environment setup and the test sibling workflow; verify tests exercise the worktree code.
+- If tests pass: proceed to Step 9.
+- If tests fail: diagnose and fix. Do not move forward with failing tests.
+- If you cannot make a test pass and are unsure why, stop and explain the blocker to the user — do not paper over it.
+
+### Step 9 — Self-review against acceptance criteria
+
+Go through each acceptance criterion in the ticket one by one. For each item:
+- Confirm it is satisfied by the code you wrote, OR
+- Flag it explicitly if it requires a manual check the user must perform
+
+Report the checklist to the user with pass/flag status for each item.
+
+---
+
+## Phase 5 — Handoff
+
+### Step 10 — Report completion
+
+Summarize:
+- Files changed and what changed in each
+- Tests added
+- Any acceptance criteria that require manual verification
+- Any out-of-scope items that came up during implementation (flag but do not implement)
+
+Then prompt:
+> "Implementation complete. Run `/commit` to stage and commit, or `/test` to re-run the test suite."

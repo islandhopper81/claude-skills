@@ -1,0 +1,9 @@
+{
+  "name": "developer-workflows",
+  "version": "1.0.0",
+  "description": "Portable project-aware development workflows for Claude and Codex",
+  "author": {
+    "name": "islandhopper81"
+  },
+  "skills": "./skills/"
+}
