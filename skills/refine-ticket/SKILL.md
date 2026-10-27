@@ -1,0 +1,209 @@
+---
+name: refine-ticket
+description: "Use when the user requests the refine-ticket workflow for the current project; follow project conventions and the shared execution context."
+---
+
+Read ../../references/project-context.md relative to this skill before acting. Resolve sibling workflows by reading ../<name>/SKILL.md relative to this skill, not by assuming slash commands exist. Treat supplied user arguments as input; in a composed workflow reuse the caller's ticket and context. When called by ship, return control without prompting for the next command. Use available host tools or authenticated service connectors; Claude tool names are examples, not requirements.
+
+# /refine-ticket — Refine a Ticket for AI Agent Implementation
+
+Usage: `/refine-ticket [TICKET-ID]` (e.g., `/refine-ticket AEN-87`, `/refine-ticket FTF-42`, or `/refine-ticket 12` / `/refine-ticket #12` for GitHub Issues)
+
+Refine a ticket so it is unambiguous and immediately implementable by a senior software engineer AI agent, without needing follow-up clarification. Auto-detects GitHub, Linear, or Jira from `CLAUDE.md`.
+
+## Instructions
+
+### Step 1 — Detect issue tracker
+
+Read `CLAUDE.md` in the project root. Look for an `issue_tracker` field:
+- `issue_tracker: github` → use the GitHub CLI (`gh`)
+- `issue_tracker: linear` → use Linear MCP tools
+- `issue_tracker: jira` → use Jira/Atlassian MCP tools
+- If not present, infer from the ticket ID format and repo:
+  - Bare number or `#`-prefixed number (e.g. `12`, `#12`), or a `github.com/.../issues/N` URL → assume **GitHub**
+  - All-caps team prefix + number (e.g. `AEN-87`, `ENG-12`) with no Jira project key in `CLAUDE.md` → assume **Linear**
+  - If `jira_project_key` is defined in `CLAUDE.md` → assume **Jira**
+  - Tiebreaker: if `git remote -v` points only to github.com and no `jira_project_key` or Linear config is present → assume **GitHub**
+- If still ambiguous, ask: "Is this a GitHub, Linear, or Jira ticket?"
+
+Confirm `gh` is available and authenticated before using it (`gh auth status`). If the GitHub tracker is selected but `gh` is missing or unauthenticated, tell the user how to fix it rather than falling back silently.
+
+### Step 2 — Fetch the ticket
+
+If a ticket ID is provided as `<user arguments>`, use it. Otherwise ask: "Which ticket would you like to refine?"
+
+**GitHub:** Normalize the ID first (strip a leading `#`; accept a bare number or a full issue URL). Fetch with the `gh` CLI:
+`gh issue view <N> --json number,title,body,labels,milestone,url`
+**Linear:** Use the Linear MCP `get_issue` tool.
+**Jira:** Use the Atlassian MCP `getJiraIssue` tool.
+
+### Step 3 — Read project context
+
+Read `CLAUDE.md` in the project root (if present) to understand:
+- Tech stack, conventions, and file layout
+- Test commands and patterns
+- Branch naming and PR workflow
+
+### Step 4 — Multi-expert analysis
+
+Analyze the ticket from each of the following perspectives. For each expert, identify **gaps, ambiguities, and risks** in the current ticket — do not yet write the refined ticket, just surface issues.
+
+---
+
+#### Business Analyst
+- Is the business value or user benefit stated clearly?
+- Are acceptance criteria present, specific, and measurable — not vague ("it works") but observable ("returns 200 with field X")?
+- Are there untested assumptions about user behavior?
+- Is success defined in a way a non-engineer could verify?
+- What is the cost of *not* doing this — to users, the product, or the business?
+
+#### Product Manager
+- Is scope tightly bounded? Is there a risk of scope creep?
+- Is everything out of scope explicitly listed?
+- Are there dependencies on other tickets or features that must be noted?
+- Does the ticket title accurately reflect what will be built?
+- Are there any UX or copy decisions left unresolved that would block implementation?
+- Is the urgency or priority rationale documented? What is blocked or degraded if this slips?
+
+#### Software Architect
+- Does this fit the existing architecture (patterns, layers, data flow)?
+- Does it introduce new dependencies or coupling that should be flagged?
+- Are there data model concerns (schema changes, migrations needed)?
+- Are there performance, scalability, or security implications?
+- Does the ticket specify which modules/files are affected, or leave that ambiguous?
+- What technical debt or system fragility accumulates if this is deferred?
+- **Does this change deprecate, supersede, rename, or replace any existing field, function, endpoint, or schema?** If so, who reads or writes the old shape today? Are those call sites addressed in the implementation plan, or queued as a follow-up ticket? Orphaned readers of deprecated code are a common source of post-merge bugs — surface them now, not at runtime.
+
+#### Software Engineer
+- Is every implementation step specific enough to act on without guessing?
+- Are function signatures, API contracts, or data shapes defined where needed?
+- Are edge cases, error states, and failure modes covered?
+- Are there technical prerequisites (migrations, env vars, config) that must happen first?
+- Would an AI agent be able to write code directly from this ticket without asking a follow-up question?
+- **Scope expansion check:** Are there adjacent tasks that will predictably need to happen as a direct consequence of this change (e.g., cleaning up callers of a renamed function, adding an index for a new query, updating a related UI state)? For each one, ask: is there a substantive reason to defer this — a different team, an external dependency, a genuine priority trade-off — or is it simply absent from the original ticket description? If there's no good reason to exclude it, it belongs in the current ticket's Implementation Plan and Acceptance Criteria, not a future ticket.
+- **Complexity & size estimate:** Based on the implementation plan and codebase context, list the specific files expected to change and estimate lines of code (new + modified). Then assign a complexity category:
+  - **Low** — 1–3 files, <100 LOC, single layer (e.g. UI-only or API-only), no schema changes, no new dependencies
+  - **Medium** — 4–8 files, 100–300 LOC, spans 2 layers (e.g. API + DB or frontend + backend), may include a migration or new env var
+  - **High** — 9+ files, 300+ LOC, cross-cutting concerns (auth, schema + migration, new service/dependency, multiple layers)
+
+#### Testing Engineer
+- Are acceptance criteria testable via automated tests?
+- Are specific test cases (happy path, error cases, boundary conditions) described?
+- What needs to be mocked or stubbed? Is that specified?
+- Are integration test scenarios identified?
+- Is there a manual testing checklist for anything not coverable by automated tests?
+
+---
+
+### Step 5 — Synthesize a refined ticket
+
+Using the gap analysis above, produce a complete refined ticket in the following structure. Fill in gaps using reasonable inferences from the codebase context and project conventions — do not leave blanks. If something is genuinely unknowable without user input, flag it in **Open Questions**.
+
+---
+
+```
+## Summary
+[1–2 sentences: what is being built, why, and what user/system problem it solves.]
+
+## Background & Context
+[Any relevant architecture context, prior tickets this builds on, or decisions already locked in.
+Include references to specific files or modules the implementer should read first.]
+
+## Motivation & Risk
+**Why this change is necessary:**
+[The specific problem, gap, or constraint that makes this work required — not just what it does,
+but why it must be done now and what is driving it.]
+
+**Impact of the change:**
+[What improves, unblocks, or becomes possible once this is implemented. Be concrete —
+e.g., "enables X feature," "removes Y bottleneck," "satisfies Z compliance requirement."]
+
+**What breaks or degrades without it:**
+[The specific negative outcome if this ticket is skipped or deferred — data corruption,
+broken user flow, security gap, blocked dependent ticket, accumulating tech debt, etc.
+If the answer is "nothing urgent," state that honestly.]
+
+## Implementation Plan
+[Ordered, specific steps. Name files, functions, and data structures explicitly.
+Each step should be actionable without further clarification.
+
+If the Architect analysis flagged this ticket as deprecating, superseding, renaming,
+or replacing an existing field/function/endpoint/schema, include a final step that
+sweeps the codebase for stale readers and writers (use the Grep tool with a concrete
+pattern, scoped to `src/` or equivalent). State the expected results inline so the
+implementer can verify completeness — either migrate the stale sites in this ticket
+or queue them as a candidate follow-up ticket in the PR description.]
+
+1. ...
+2. ...
+
+## API / Data Contract Changes
+[If applicable: new endpoints, changed request/response shapes, schema migrations, env vars.
+If none: "No API or data contract changes."]
+
+## Acceptance Criteria
+[Specific, testable, binary-pass/fail items. Each item must be verifiable.]
+
+- [ ] ...
+- [ ] ...
+
+## Test Requirements
+- **Unit tests**: [Name specific functions/modules and what to assert]
+- **Integration tests**: [Cross-layer or API-level tests, what to mock]
+- **Manual checks**: [Step-by-step actions to validate end-to-end]
+
+## Out of Scope
+[Items explicitly excluded from this ticket. Each item must have a substantive reason for deferral — a different team, an external dependency, or a deliberate priority trade-off. Items absent from the original ticket description but predictably needed should be pulled into the Implementation Plan instead, not listed here. For each item kept here, state the reason.]
+
+- <item> — *Reason for deferral: <reason>*
+
+## Dependencies & Prerequisites
+[Other tickets that must merge first, env vars that must exist, services that must be running.]
+
+## Complexity & Cost Estimate
+- **Complexity**: Low / Medium / High
+- **Files expected to change**: [N files — list each one]
+- **Estimated lines of code**: ~X–Y total (Z new, W modified)
+- **Estimated implementation cost (Claude Sonnet 4.6 @ $3/MTok input · $15/MTok output)**:
+  - Input (context: CLAUDE.md + affected files + ticket): ~Xk tokens → ~$Y
+  - Output (code generation + tool responses): ~Xk tokens → ~$Y
+  - **Total estimate**: ~$X–$Y
+  *(Range reflects uncertainty in iteration count and context depth. Actual cost may vary.)*
+
+## Open Questions
+[Anything that requires product or engineering decision before implementation can proceed.
+If none: omit this section.]
+```
+
+---
+
+### Step 6 — Present and confirm
+
+Show the refined ticket to the user and ask:
+
+> "Does this refinement look accurate, or would you like to adjust anything before I update the ticket?"
+
+Do not update the tracker until the user explicitly approves.
+
+### Step 7 — Update the tracker and apply label
+
+Once approved:
+
+**GitHub:**
+1. Write the refined ticket body to a temp file, then update the issue:
+   `gh issue edit <N> --body-file <tmpfile>`
+   (Use `--body-file`, not `--body`, so multi-line markdown — headings, task lists — is preserved.)
+2. Ensure the `refined` label exists, then apply it (GitHub colors omit the leading `#`):
+   `gh label create refined --color 7C3AED --description "Ticket has been refined and is ready for implementation" --force`
+   `gh issue edit <N> --add-label refined`
+
+**Linear:**
+1. Update the ticket description using the Linear MCP `save_issue` tool.
+2. Apply the `refined` label using the `labels` field in `save_issue` (e.g. `labels: ["refined"]`).
+   - If the label does not exist, create it first using `create_issue_label` with color `#7C3AED` and description `"Ticket has been refined and is ready for implementation"`, then apply it.
+
+**Jira:**
+1. Update the ticket description using the Atlassian MCP `editJiraIssue` tool.
+2. Apply a `refined` label using the labels field in `editJiraIssue`.
+
+Report back: "Ticket [ID] has been updated and is ready for implementation."
